@@ -6,7 +6,7 @@
 
 var aggMode  = getSystemProperty('sunburst.aggMode')  || 'sum';
 var maxFlows = getSystemProperty('sunburst.maxFlows') || 100;
-var minValue = getSystemProperty('sunburst.minValue') || 0.01;
+var minValue = getSystemProperty('sunburst.minValue') || 1;
 var agents   = getSystemProperty('sunburst.agents')   || 'ALL';
 var t        = getSystemProperty('sunburst.t')        || 5;
 var n        = getSystemProperty('sunburst.n')        || 20;
