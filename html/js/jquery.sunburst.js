@@ -37,7 +37,7 @@
   }
 
   function label(ctx, cR, step, depth, startAngle, node, total, options) {
-    var keys, start, i, child, end, textSize, textAngle, textRadius, meas;
+    var keys, start, i, child, end, textSize, textAngle, textRadius;
 
     if(!node.children) return;
 
@@ -49,25 +49,27 @@
       end = start + ((child.value / total) * 2 * Math.PI); 
       label(ctx, cR + step, step, depth + 1, start, child, total, options);
 
-      textSize = Math.min(options.segmentFontSize, Math.floor((end - start) * cR));
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font = textSize + 'px ' + options.fontFamily;
       textAngle = start + ((end - start) / 2);
       textRadius = cR + (step / 2);
       ctx.fillStyle = options.segmentTextColor;
-      meas = ctx.measureText(keys[i]);
       if(options.segmentFontRotate) { 
-        ctx.save();
-        ctx.translate(textRadius * Math.cos(textAngle), textRadius * Math.sin(textAngle));
-        if(textAngle > Math.PI * 0.5 && textAngle < Math.PI * 1.5) {
-          ctx.rotate(Math.PI + textAngle);
-        } else {
-          ctx.rotate(textAngle);
+        textSize = Math.min(options.segmentFontSize, Math.floor((end - start) * cR));
+        if(textSize > 0) {
+          ctx.font = textSize + 'px ' + options.fontFamily;
+          ctx.save();
+          ctx.translate(textRadius * Math.cos(textAngle), textRadius * Math.sin(textAngle));
+          if(textAngle > Math.PI * 0.5 && textAngle < Math.PI * 1.5) {
+            ctx.rotate(Math.PI + textAngle);
+          } else {
+            ctx.rotate(textAngle);
+          }
+          ctx.fillText(keys[i], 0, 0);
+          ctx.restore();
         }
-        ctx.fillText(keys[i], 0, 0);
-        ctx.restore();
       } else {
+        ctx.font = options.segmentFontSize + 'px ' + options.fontFamily;
         ctx.fillText(keys[i], textRadius * Math.cos(textAngle), textRadius * Math.sin(textAngle));
       }
 
