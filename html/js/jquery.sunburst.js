@@ -10,7 +10,7 @@
     return hval >>> 0;
   }
 
-  function draw(ctx, cX, cY, cR, step, depth, startAngle, node, total, options) {
+  function draw(ctx, cR, step, depth, startAngle, node, total, options) {
     var keys, start, i, child, end;
 
     if(!node.children) return;
@@ -21,11 +21,11 @@
       child = node.children[keys[i]];
 
       end = start + ((child.value / total) * 2 * Math.PI);
-      draw(ctx, cX, cY, cR + step, step, depth + 1, start, child, total, options);
+      draw(ctx, cR + step, step, depth + 1, start, child, total, options);
 
       ctx.beginPath();
-      ctx.moveTo(cX,cY);
-      ctx.arc(cX,cY,cR + step, start, end);
+      ctx.moveTo(0,0);
+      ctx.arc(0, 0, cR + step, start, end);
       ctx.closePath();
       ctx.fillStyle = options.colors[hash(keys[i],options.seed) % options.colors.length];
       ctx.strokeStyle = options.segmentOutlineColor;
@@ -36,8 +36,8 @@
     }
   }
 
-  function label(ctx, cX, cY, cR, step, depth, startAngle, node, total, options) {
-    var keys, start, i, child, end, textAngle, textRadius;
+  function label(ctx, cR, step, depth, startAngle, node, total, options) {
+    var keys, start, i, child, end, textSize, textAngle, textRadius, meas;
 
     if(!node.children) return;
 
@@ -47,29 +47,105 @@
       child = node.children[keys[i]];
 
       end = start + ((child.value / total) * 2 * Math.PI); 
-      label(ctx, cX, cY, cR + step, step, depth + 1, start, child, total, options);
+      label(ctx, cR + step, step, depth + 1, start, child, total, options);
 
+      textSize = Math.min(options.segmentFontSize, Math.floor((end - start) * cR));
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font = '15px sans-serif';
+      ctx.font = textSize + 'px ' + options.fontFamily;
       textAngle = start + ((end - start) / 2);
       textRadius = cR + (step / 2);
       ctx.fillStyle = options.segmentTextColor;
-      ctx.fillText(keys[i], cX + (textRadius * Math.cos(textAngle)), cY + (textRadius * Math.sin(textAngle)));
+      meas = ctx.measureText(keys[i]);
+      if(options.segmentFontRotate) { 
+        ctx.save();
+        ctx.translate(textRadius * Math.cos(textAngle), textRadius * Math.sin(textAngle));
+        if(textAngle > Math.PI * 0.5 && textAngle < Math.PI * 1.5) {
+          ctx.rotate(Math.PI + textAngle);
+        } else {
+          ctx.rotate(textAngle);
+        }
+        ctx.fillText(keys[i], 0, 0);
+        ctx.restore();
+      } else {
+        ctx.fillText(keys[i], textRadius * Math.cos(textAngle), textRadius * Math.sin(textAngle));
+      }
 
       start = end; 
     } 
   }
 
+  function center(ctx, cR, data, options) {
+    ctx.beginPath();
+    ctx.arc(0, 0, cR, 0, 2 * Math.PI);
+    ctx.closePath();
+    ctx.fillStyle = options.centerColor;
+    ctx.strokeStyle = options.centerOutlineColor;
+    ctx.fill();
+    ctx.stroke();
+
+    if(data.label) {
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = options.centerFontSize + 'px ' + options.fontFamily;
+      ctx.fillStyle = options.centerTextColor;
+      ctx.fillText(data.label, 0, 0);
+    } 
+  }
+
+  function findSegment(cR, step, depth, startAngle, node, total, radius, angle) {
+    var keys, start, i, child, end, segment;
+
+    if(!node.children) return null;
+
+    keys = Object.keys(node.children).sort();
+    start = startAngle;
+    for(i = 0; i < keys.length; i++) {
+      child = node.children[keys[i]];
+      end = start + ((child.value / total) * 2 * Math.PI);
+      if(start <= angle && end >= angle && radius >= cR && radius <= cR + step) {
+        return {id:child.id,filter:child.filter};
+      } 
+      segment = findSegment(cR + step, step, depth + 1, start, child, total, radius, angle);
+      if(segment) return segment;
+      start = end;
+    }
+    return null;
+  }
+
+  function clickFunction(widget) {
+    return function(e) { 
+      var $canvas, data, off, cX, cY, cR, x, y, radius, angle;
+      data = widget._data;
+      $canvas = $(widget._canvas);
+      off = $canvas.offset();
+      cX = ($canvas.width() / 2);
+      cY = ($canvas.height() / 2);
+      cR = widget.options.centerRadius;
+      x = e.pageX - off.left - cX;
+      y = e.pageY - off.top - cY;
+      step = (Math.min(cX, cY) - cR) / data.depth;
+      radius = Math.sqrt(x*x + y*y);
+      angle = Math.atan2(y,x);
+      if(angle < 0) angle += Math.PI*2;
+      seg = findSegment(cR,step,0,0,data,data.value,radius,angle);
+      if(seg) $canvas.trigger('sunburstclick', seg);
+    }
+  }
+
   $.widget('inmon.sunburst', {
     options: {
+      clickable: false,
+      fontFamily: 'sans-serif',
       centerRadius: 60,
       centerColor: '#ffffff',
       centerOutlineColor: '#000000',
       centerTextColor: '#000000',
-      centerFont: '20px sans-serif',
+      centerFontSize: 20,
       segmentOutlineColor: '#000000',
       segmentTextColor: '#f8f8ff',
+      segmentFontSize: 15,
+      segmentFontRotate: true,
       colors: [
         '#3366cc', '#dc3912', '#ff9900', '#109618', '#990099', '#0099c6',
         '#dd4477', '#66aa00', '#b82e2e', '#316395', '#994499', '#22aa99',
@@ -82,17 +158,26 @@
     _create: function() {
       this.element.addClass('sunburst');
       this._canvas = $('<canvas/>').appendTo(this.element);
+      this._data = {};
+      if(this.options.clickable) {
+        this._canvas.addClass('clickable').click(clickFunction(this));
+      }
     },
     _destroy: function() {
+      if (this.options.clickable)
+        this._canvas.removeClass('clickable').unbind('click');
       this.element.removeClass('sunburst');
       this.element.empty();
       delete this._canvas;
+      delete this._data;
     },
     draw: function(data) {
       var canvas, ctx, h, w, ratio, colors, cX, cY, cR, step;
       canvas = this._canvas[0];
       if (!canvas || !canvas.getContext)
         return;
+
+      this._data = data;
 
       ctx = canvas.getContext('2d');
       h = this._canvas.height();
@@ -112,24 +197,11 @@
       cR = this.options.centerRadius;
       step = (Math.min(cX, cY) - cR) / data.depth;
 
-      draw(ctx, cX, cY, cR, step, 0, 0, data, data.value, this.options);
-      label(ctx, cX, cY, cR, step, 0, 0, data, data.value, this.options);
+      ctx.translate(cX, cY);
 
-      ctx.beginPath();
-      ctx.arc(cX, cY, cR, 0, 2 * Math.PI);
-      ctx.closePath();
-      ctx.fillStyle = this.options.centerColor;
-      ctx.strokeStyle = this.options.centerOutlineColor;
-      ctx.fill();
-      ctx.stroke();
-
-      if(data.label) {
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.font = this.options.centerFont;
-        ctx.fillStyle = this.options.centerTextColor;
-        ctx.fillText(data.label, cX, cY);
-      }
+      draw(ctx, cR, step, 0, 0, data, data.value, this.options);
+      label(ctx, cR, step, 0, 0, data, data.value, this.options);
+      center(ctx, cR, data, this.options);
     }
   });
 })(jQuery);
