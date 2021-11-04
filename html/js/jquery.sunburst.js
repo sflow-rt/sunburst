@@ -58,15 +58,22 @@
         textSize = Math.min(options.segmentFontSize, Math.floor((end - start) * cR));
         if(textSize > 0) {
           ctx.font = textSize + 'px ' + options.fontFamily;
-          ctx.save();
-          ctx.translate(textRadius * Math.cos(textAngle), textRadius * Math.sin(textAngle));
-          if(textAngle > Math.PI * 0.5 && textAngle < Math.PI * 1.5) {
-            ctx.rotate(Math.PI + textAngle);
-          } else {
-            ctx.rotate(textAngle);
+          var width = ctx.measureText(keys[i]).width;
+          if(width > step) {
+            textSize = Math.floor(textSize * (step / width));
+            ctx.font = textSize + 'px ' + options.fontFamily;
           }
-          ctx.fillText(keys[i], 0, 0);
-          ctx.restore();
+          if(textSize > 0) {
+            ctx.save();
+            ctx.translate(textRadius * Math.cos(textAngle), textRadius * Math.sin(textAngle));
+            if(textAngle > Math.PI * 0.5 && textAngle < Math.PI * 1.5) {
+              ctx.rotate(Math.PI + textAngle);
+            } else {
+              ctx.rotate(textAngle);
+            }
+            ctx.fillText(keys[i], 0, 0);
+            ctx.restore();
+          }
         }
       } else {
         ctx.font = options.segmentFontSize + 'px ' + options.fontFamily;

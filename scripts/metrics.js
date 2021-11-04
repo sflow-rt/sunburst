@@ -1,6 +1,6 @@
 // author: InMon Corp.
-// version: 0.4
-// date: 10/28/2021
+// version: 0.5
+// date: 11/04/2021
 // description: Sunburst display of flows
 // copyright: Copyright (c) 2021 InMon Corp. ALL RIGHTS RESERVED
 
@@ -12,23 +12,29 @@ var t        = getSystemProperty('sunburst.t')        || 5;
 var n        = getSystemProperty('sunburst.n')        || 20;
 var value    = getSystemProperty('sunburst.value')    || 'frames';
 
-setFlow('sunburst-stack', {
-  keys:[
-    'stack',
-    'null:ethernetprotocol:0',
-    'null:ipprotocol:0',
-    'null:ip6nexthdr:0',
-    'null:tcpsourceport:0',
-    'null:tcpdestinationport:0',
-    'null:udpsourceport:0',
-    'null:udpdestinationport:0'
-  ],
-  value:value,
-  t:t,
-  n:n
-});
+function setProtocolFlows() {
+  setFlow('sunburst-stack', {
+    keys:[
+      'stack',
+      'null:ethernetprotocol:0',
+      'null:ipprotocol:0',
+      'null:ip6nexthdr:0',
+      'null:tcpsourceport:0',
+      'null:tcpdestinationport:0',
+      'null:udpsourceport:0',
+      'null:udpdestinationport:0'
+    ],
+    value:value,
+    t:t,
+    n:n
+  });
+}
 
-function getData() {
+function clearProtocolFlows() {
+  clearFlow('sunburst-stack');
+}
+
+function getProtocolData() {
   var tree = {depth:0,value:0,label:'Protocols'};
   var top = activeFlows(agents,'sunburst-stack',maxFlows,minValue,aggMode);
   top.forEach(function(el) {
@@ -47,8 +53,8 @@ function getData() {
       } else {
         child.value += val;
       }
-      child.filter = 'prefix:stack:.:'+(i+1)+'='+protos.slice(0,i+1).join('.');
       child.id=protos.slice(0,i+1).join('.');
+      child.filter = 'prefix:stack:.:'+(i+1)+'='+child.id;
       node = child;
     });
     let port = 0;
@@ -93,7 +99,95 @@ function getData() {
   return tree;
 };
 
+function setDnsFlows() {
+  setFlow('sunburst-dns-src', {
+    keys: 'if:[first:stack:.:ip:ip6]:ip:[dns:ipsource]:[dns:ip6source]',
+    value:value,
+    t:t,
+    n:n
+  });
+
+  setFlow('sunburst-dns-dst', {
+    keys: 'if:[first:stack:.:ip:ip6]:ip:[dns:ipdestination]:[dns:ip6destination]',
+    value:value,
+    t:t,
+    n:n
+  });
+}
+
+function clearDnsFlows() {
+  clearFlow('sunburst-dns-src');
+  clearFlow('sunburst-dns-dst');
+}
+
+function getDnsData() {
+  var tree = {depth:0,value:0,label:'DNS'};
+  var top = activeFlows(agents,'sunburst-dns-src',maxFlows,minValue,aggMode)
+    .concat(activeFlows(agents,'sunburst-dns-dst',maxFlows,minValue,aggMode));
+  top.forEach(function(el) {
+    let node = tree;
+    let val = el.value;
+    let doms = el.key.split('.');
+    tree.value += val;
+    if(doms.length - 1 > tree.depth) tree.depth = doms.length - 1;
+    for(let i = doms.length - 2; i >= 0; i--) {
+      if(!node.children) node.children = {};
+      let dom = doms[i];
+      let child = node.children[dom];
+      if(!child) {
+        child = {value:val};
+        node.children[dom] = child;
+      } else {
+        child.value += val;
+      }
+      child.id=doms.slice(i).join('.');
+      child.filter = 'suffix:[if:[first:stack:.:ip:ip6]:ip:[dns:ipsource]:[dns:ip6source]]:.:'+(doms.length - i)+'='+child.id;
+      child.filter += '|suffix:[if:[first:stack:.:ip:ip6]:ip:[dns:ipdestination]:[dns:ip6destination]]:.:'+(doms.length - i)+'='+child.id;
+      node = child;
+    }
+  });
+  return tree;
+}
+
+var queries = {
+  protocols: {
+    setFlows: setProtocolFlows,
+    clearFlows: clearProtocolFlows,
+    getData: getProtocolData,
+    flowsDefined: false,
+    lastQuery: 0
+  },
+  dns: {
+    setFlows: setDnsFlows,
+    clearFlows: clearDnsFlows,
+    getData: getDnsData,
+    flowsDefined: false,
+    lastQuery: 0
+  }
+};
+
+setIntervalHandler(function(now) {
+  for(var name in queries) {
+    let query = queries[name];
+    if(query.flowsDefined && (now - query.lastQuery) > 10000) {
+      query.clearFlows();
+      query.flowsDefined = false;
+    }
+  }
+},1);
+
 setHttpHandler(function(req) {
-  return getData();
+  if(!req.path || req.path.length != 1) throw 'not_found';
+  var result;
+  var query = queries[req.path[0]];
+  if(!query) throw 'not_found';
+
+  if(!query.flowsDefined) {
+    query.setFlows();
+    query.flowsDefined = true;
+  }
+  query.lastQuery = Date.now();
+
+  return query.getData();
 });
 

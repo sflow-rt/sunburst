@@ -1,13 +1,32 @@
 $(function() {
   var restPath = '../scripts/metrics.js/';
-  var dataURL = restPath + 'json';
   var enableFlowBrowserURL = '../../../app/browse-flows/status';
   var browseFlowsPage = '../../browse-flows/html/index.html';
 
+  var selected;
+  function setNav(target) {
+    $('.navbar .nav-item a[href="'+target+'"]').parent().addClass('active').siblings().removeClass('active');
+    $(target).show().siblings().hide();
+    window.sessionStorage.setItem('ddos_protect_nav',target);
+    window.history.replaceState(null,'',target);
+    selected = target.slice(1);
+  }
+
+  var hash = window.location.hash;
+  if(hash && $('.navbar .nav-item a[href="'+hash+'"]').length == 1) setNav(hash);
+  else setNav(window.sessionStorage.getItem('ddos_protect_nav') || $('.navbar .nav-item a').first().attr('href'));
+
+  $('.navbar .nav-link').on('click', function(e) {
+    var selected = $(this).attr('href');
+    setNav(selected);
+  });
+
+  $('a[href^="#"]').on('click', function(e) {
+    e.preventDefault();
+  });
+
   var clickable = false;
 
-  $.get(enableFlowBrowserURL, function(res) { console.log(JSON.stringify(res)); });
-  
   $.ajax({
     url: enableFlowBrowserURL,
     dataType:'text',
@@ -47,7 +66,7 @@ $(function() {
 
     (function pollData() {
       $.ajax({
-        url: dataURL,
+        url: restPath + selected + '/json',
         success: function(data) {
           draw(data);
         },
