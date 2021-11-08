@@ -25,35 +25,37 @@ $(function() {
     e.preventDefault();
   });
 
-  var clickable = false;
+  var browseFlows = false;
 
   $.ajax({
     url: enableFlowBrowserURL,
     dataType:'text',
     contentType:'text/plain',
     success: function(status) {
-      clickable = true;
+      browseFlows = true;
     },
     error: function(result,status,errorThrown) {
-      clickable = false;
+      browseFlows = false;
     },
     complete: function() {
-      initialize(); 
+      initialize();
     },
     timeout: 10000
   });
 
   function initialize() {
+    var _data = {};
+    var clickable = browseFlows;
     var widget = $('#sunburst').sunburst({clickable:clickable});
     if(clickable) {
       widget.on('sunburstclick', function(e,val) {
-        if(val && val.filter) {
-          window.location.href=browseFlowsPage+'?keys=stack&value=fps&filter='+encodeURIComponent(val.filter);
+        console.log(val);
+        if(_data.flow && val && val.filter) {
+          if(browseFlows) window.location.href=browseFlowsPage+'?keys=stack&value=fps&filter='+encodeURIComponent(val.filter);
         }
       });
     }
 
-    var _data = {};
     function draw(data) {
       _data = data;
       widget.sunburst('draw',_data);

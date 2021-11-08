@@ -1,6 +1,6 @@
 // author: InMon Corp.
-// version: 0.5
-// date: 11/04/2021
+// version: 0.6
+// date: 11/05/2021
 // description: Sunburst display of flows
 // copyright: Copyright (c) 2021 InMon Corp. ALL RIGHTS RESERVED
 
@@ -35,7 +35,7 @@ function clearProtocolFlows() {
 }
 
 function getProtocolData() {
-  var tree = {depth:0,value:0,label:'Protocols'};
+  var tree = {depth:0,value:0,label:'Protocols',flow:true};
   var top = activeFlows(agents,'sunburst-stack',maxFlows,minValue,aggMode);
   top.forEach(function(el) {
     let node = tree;
@@ -121,7 +121,7 @@ function clearDnsFlows() {
 }
 
 function getDnsData() {
-  var tree = {depth:0,value:0,label:'DNS'};
+  var tree = {depth:0,value:0,label:'DNS',flow:true};
   var top = activeFlows(agents,'sunburst-dns-src',maxFlows,minValue,aggMode)
     .concat(activeFlows(agents,'sunburst-dns-dst',maxFlows,minValue,aggMode));
   top.forEach(function(el) {
@@ -149,6 +149,54 @@ function getDnsData() {
   return tree;
 }
 
+function setProcessFlows() { }
+
+function clearProcessFlows() { }
+
+function updateProcessTree(tree,path,val) {
+  tree.value += val;
+  tree.depth = Math.max(tree.depth,path.length);
+  var node = tree;
+  var nodes = [];
+  path.forEach(function(layer,i) {
+    if(!node.children) node.children = {};
+    let child = node.children[layer];
+    if(!child) {
+      child = {value:val};
+      node.children[layer] = child;
+    } else {
+      child.value += val;
+    }
+    child.id = path.slice(0,i+1).join('.');
+    nodes.push(child);
+    node = child;
+  });
+  return nodes;
+}
+
+function getProcessData() {
+  var tree = {depth:0,value:0,label:'Process',flow:false};
+  var cols = [
+    'sort:vir_cpu_utilization:-1000',
+    'null:k8s_namespace',
+    'null:k8s_name',
+    'null:systemd_service',
+    'null:swarm_name',
+    'null:jvm_name',
+    'null:vir_host_name'
+  ];
+  var top = table('ALL',cols);
+  top.forEach(function(row) {
+    let val = row[0].metricValue;
+    if(row[1]) updateProcessTree(tree,['k8s',row[1].metricValue,row[2].metricValue],val);
+    else if(row[3]) updateProcessTree(tree,['systemd',row[3].metricValue],val);
+    else if(row[4]) updateProcessTree(tree,['swarm',row[4].metricValue],val);
+    else if(row[5]) updateProcessTree(tree,['jvm',row[6].metricValue],val);
+    else if(row[6]) updateProcessTree(tree,['vm',row[6].metricValue],val);
+  });
+  return tree;
+}
+
 var queries = {
   protocols: {
     setFlows: setProtocolFlows,
@@ -163,18 +211,25 @@ var queries = {
     getData: getDnsData,
     flowsDefined: false,
     lastQuery: 0
+  },
+  process: {
+    setFlows: setProcessFlows,
+    clearFlows: clearProcessFlows,
+    getData: getProcessData,
+    flowsDefined: false,
+    lastQuery: 0
   }
 };
 
 setIntervalHandler(function(now) {
   for(var name in queries) {
     let query = queries[name];
-    if(query.flowsDefined && (now - query.lastQuery) > 10000) {
+    if(query.flowsDefined && (now - query.lastQuery) > 60000) {
       query.clearFlows();
       query.flowsDefined = false;
     }
   }
-},1);
+});
 
 setHttpHandler(function(req) {
   if(!req.path || req.path.length != 1) throw 'not_found';
