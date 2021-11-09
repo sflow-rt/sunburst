@@ -1,6 +1,6 @@
 // author: InMon Corp.
-// version: 0.6
-// date: 11/05/2021
+// version: 0.7
+// date: 11/09/2021
 // description: Sunburst display of flows
 // copyright: Copyright (c) 2021 InMon Corp. ALL RIGHTS RESERVED
 
@@ -35,7 +35,7 @@ function clearProtocolFlows() {
 }
 
 function getProtocolData() {
-  var tree = {depth:0,value:0,label:'Protocols',flow:true};
+  var tree = {depth:0,value:0,label:'Protocols',flow:true,description:'Network traffic (frames per second) broken out by protocol stack'};
   var top = activeFlows(agents,'sunburst-stack',maxFlows,minValue,aggMode);
   top.forEach(function(el) {
     let node = tree;
@@ -121,7 +121,7 @@ function clearDnsFlows() {
 }
 
 function getDnsData() {
-  var tree = {depth:0,value:0,label:'DNS',flow:true};
+  var tree = {depth:0,value:0,label:'DNS',flow:true,description:'Network traffic (frames per second) broken out by reverse DNS lookup of source/destination addresses'};
   var top = activeFlows(agents,'sunburst-dns-src',maxFlows,minValue,aggMode)
     .concat(activeFlows(agents,'sunburst-dns-dst',maxFlows,minValue,aggMode));
   top.forEach(function(el) {
@@ -175,7 +175,7 @@ function updateProcessTree(tree,path,val) {
 }
 
 function getProcessData() {
-  var tree = {depth:0,value:0,label:'Process',flow:false};
+  var tree = {depth:0,value:0,label:'Process',flow:false,description:'Cluster wide CPU time broken out by service'};
   var cols = [
     'sort:vir_cpu_utilization:-1000',
     'null:k8s_namespace',

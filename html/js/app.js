@@ -59,6 +59,7 @@ $(function() {
     function draw(data) {
       _data = data;
       widget.sunburst('draw',_data);
+      if(_data.description) $('#caption').text(_data.description);
     }
     function redraw() {
       widget.sunburst('draw',_data);
