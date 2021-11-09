@@ -7,14 +7,14 @@ $(function() {
   function setNav(target) {
     $('.navbar .nav-item a[href="'+target+'"]').parent().addClass('active').siblings().removeClass('active');
     $(target).show().siblings().hide();
-    window.sessionStorage.setItem('ddos_protect_nav',target);
+    window.sessionStorage.setItem('sunburst_nav',target);
     window.history.replaceState(null,'',target);
     selected = target.slice(1);
   }
 
   var hash = window.location.hash;
   if(hash && $('.navbar .nav-item a[href="'+hash+'"]').length == 1) setNav(hash);
-  else setNav(window.sessionStorage.getItem('ddos_protect_nav') || $('.navbar .nav-item a').first().attr('href'));
+  else setNav(window.sessionStorage.getItem('sunburst_nav') || $('.navbar .nav-item a').first().attr('href'));
 
   $('.navbar .nav-link').on('click', function(e) {
     var selected = $(this).attr('href');
