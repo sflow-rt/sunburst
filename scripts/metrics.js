@@ -215,7 +215,7 @@ function getGPUData() {
   ];
   var top = table('ALL',cols);
   top.forEach(function(row) {
-    if(row[0].dataSource === row[6].dataSource) {
+    if(row[0] && row[6] && row[0].dataSource === row[6].dataSource) {
       let val = row[0].metricValue;
       if(row[1]) {
         if(!gpuExcludedK8SNamespaces.includes(row[1].metricValue)) {
