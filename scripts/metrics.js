@@ -1,6 +1,6 @@
 // author: InMon Corp.
-// version: 0.7
-// date: 11/09/2021
+// version: 0.8
+// date: 12/02/2021
 // description: Sunburst display of flows
 // copyright: Copyright (c) 2021 InMon Corp. ALL RIGHTS RESERVED
 
@@ -11,6 +11,7 @@ var agents   = getSystemProperty('sunburst.agents')   || 'ALL';
 var t        = getSystemProperty('sunburst.t')        || 5;
 var n        = getSystemProperty('sunburst.n')        || 20;
 var value    = getSystemProperty('sunburst.value')    || 'frames';
+var gpuExcludedK8SNamespaces = (getSystemProperty('sunburst.gpu.k8s.namespace.exclude') || 'gpu-mon,kube-system').split(',');
 
 function setProtocolFlows() {
   setFlow('sunburst-stack', {
@@ -177,13 +178,13 @@ function updateProcessTree(tree,path,val) {
 function getProcessData() {
   var tree = {depth:0,value:0,label:'Process',flow:false,description:'Cluster wide CPU time broken out by service'};
   var cols = [
-    'sort:vir_cpu_utilization:-1000',
+    'sort:vir_cpu_utilization:-10000',
     'null:k8s_namespace',
     'null:k8s_name',
     'null:systemd_service',
     'null:swarm_name',
     'null:jvm_name',
-    'null:vir_host_name'
+    'vir_host_name'
   ];
   var top = table('ALL',cols);
   top.forEach(function(row) {
@@ -193,6 +194,39 @@ function getProcessData() {
     else if(row[4]) updateProcessTree(tree,['swarm',row[4].metricValue],val);
     else if(row[5]) updateProcessTree(tree,['jvm',row[6].metricValue],val);
     else if(row[6]) updateProcessTree(tree,['vm',row[6].metricValue],val);
+  });
+  return tree;
+}
+
+function setGPUFlows() { }
+
+function clearGPUFlows() { }
+
+function getGPUData() {
+  var tree = {depth:0,value:0,label:'Process',flow:false,description:'Cluster wide GPU time broken out by service'};
+  var cols = [
+    'sort:nvml_gputime:-10000',
+    'null:k8s_namespace',
+    'null:k8s_name',
+    'null:systemd_service',
+    'null:swarm_name',
+    'null:jvm_name',
+    'vir_host_name'
+  ];
+  var top = table('ALL',cols);
+  top.forEach(function(row) {
+    if(row[0].dataSource === row[6].dataSource) {
+      let val = row[0].metricValue;
+      if(row[1]) {
+        if(!gpuExcludedK8SNamespaces.includes(row[1].metricValue)) {
+          updateProcessTree(tree,['k8s',row[1].metricValue,row[2].metricValue],val);
+        }
+      }
+      else if(row[3]) updateProcessTree(tree,['systemd',row[3].metricValue],val);
+      else if(row[4]) updateProcessTree(tree,['swarm',row[4].metricValue],val);
+      else if(row[5]) updateProcessTree(tree,['jvm',row[6].metricValue],val);
+      else if(row[6]) updateProcessTree(tree,['vm',row[6].metricValue],val);
+    }
   });
   return tree;
 }
@@ -216,6 +250,13 @@ var queries = {
     setFlows: setProcessFlows,
     clearFlows: clearProcessFlows,
     getData: getProcessData,
+    flowsDefined: false,
+    lastQuery: 0
+  },
+  gpu: {
+    setFlows: setGPUFlows,
+    clearFlows: clearGPUFlows,
+    getData: getGPUData,
     flowsDefined: false,
     lastQuery: 0
   }
