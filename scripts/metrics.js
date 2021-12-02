@@ -203,7 +203,7 @@ function setGPUFlows() { }
 function clearGPUFlows() { }
 
 function getGPUData() {
-  var tree = {depth:0,value:0,label:'Process',flow:false,description:'Cluster wide GPU time broken out by service'};
+  var tree = {depth:0,value:0,label:'GPU',flow:false,description:'Cluster wide GPU time broken out by service'};
   var cols = [
     'sort:nvml_gputime:-10000',
     'null:k8s_namespace',
