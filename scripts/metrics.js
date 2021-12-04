@@ -1,6 +1,6 @@
 // author: InMon Corp.
-// version: 0.8
-// date: 12/02/2021
+// version: 0.9
+// date: 12/04/2021
 // description: Sunburst display of flows
 // copyright: Copyright (c) 2021 InMon Corp. ALL RIGHTS RESERVED
 
@@ -213,20 +213,18 @@ function getGPUData() {
     'null:jvm_name',
     'vir_host_name'
   ];
-  var top = table('ALL',cols);
+  var top = table('ALL',cols,{ds:['3.*']});
   top.forEach(function(row) {
-    if(row[0] && row[6] && row[0].dataSource === row[6].dataSource) {
-      let val = row[0].metricValue;
-      if(row[1]) {
-        if(!gpuExcludedK8SNamespaces.includes(row[1].metricValue)) {
-          updateProcessTree(tree,['k8s',row[1].metricValue,row[2].metricValue],val);
-        }
+    let val = row[0].metricValue;
+    if(row[1]) {
+      if(!gpuExcludedK8SNamespaces.includes(row[1].metricValue)) {
+        updateProcessTree(tree,['k8s',row[1].metricValue,row[2].metricValue],val);
       }
-      else if(row[3]) updateProcessTree(tree,['systemd',row[3].metricValue],val);
-      else if(row[4]) updateProcessTree(tree,['swarm',row[4].metricValue],val);
-      else if(row[5]) updateProcessTree(tree,['jvm',row[6].metricValue],val);
-      else if(row[6]) updateProcessTree(tree,['vm',row[6].metricValue],val);
     }
+    else if(row[3]) updateProcessTree(tree,['systemd',row[3].metricValue],val);
+    else if(row[4]) updateProcessTree(tree,['swarm',row[4].metricValue],val);
+    else if(row[5]) updateProcessTree(tree,['jvm',row[6].metricValue],val);
+    else if(row[6]) updateProcessTree(tree,['vm',row[6].metricValue],val);
   });
   return tree;
 }
