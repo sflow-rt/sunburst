@@ -1,8 +1,8 @@
 // author: InMon Corp.
 // version: 0.9
-// date: 12/04/2021
+// date: 9/11/2023
 // description: Sunburst display of flows
-// copyright: Copyright (c) 2021 InMon Corp. ALL RIGHTS RESERVED
+// copyright: Copyright (c) 2021-2023 InMon Corp. ALL RIGHTS RESERVED
 
 var aggMode  = getSystemProperty('sunburst.aggMode')  || 'sum';
 var maxFlows = getSystemProperty('sunburst.maxFlows') || 100;
@@ -205,7 +205,7 @@ function clearGPUFlows() { }
 function getGPUData() {
   var tree = {depth:0,value:0,label:'GPU',flow:false,description:'Cluster wide GPU time broken out by service'};
   var cols = [
-    'sort:nvml_gputime:-10000',
+    'sort:vir_nvml_gputime:-10000',
     'null:k8s_namespace',
     'null:k8s_name',
     'null:systemd_service',
@@ -213,7 +213,7 @@ function getGPUData() {
     'null:jvm_name',
     'vir_host_name'
   ];
-  var top = table('ALL',cols,{ds:['3.*']});
+  var top = table('ALL',cols);
   top.forEach(function(row) {
     let val = row[0].metricValue;
     if(row[1]) {
