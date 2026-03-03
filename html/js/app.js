@@ -10,6 +10,7 @@ $(function() {
     window.sessionStorage.setItem('sunburst_nav',target);
     window.history.replaceState(null,'',target);
     selected = target.slice(1);
+    changedMetric();
   }
 
   var hash = window.location.hash;
@@ -43,10 +44,49 @@ $(function() {
     timeout: 10000
   });
 
+  var widget;
+  var pollRequest;
+  var pollTimeout;
+  var _data = {};
+  function draw(data) {
+    _data = data;
+    widget.sunburst('draw',_data);
+    if(_data.description) $('#caption').text(_data.description);
+  }
+  function redraw() {
+    widget.sunburst('draw',_data);
+  }
+  function pollData() {
+    pollRequest = $.ajax({
+      url: restPath + selected + '/json',
+      success: function(data) {
+        draw(data);
+      },
+      error: function(result,status,errorThrown) {
+        draw({});
+      },
+      complete: function() {
+        pollTimeout = setTimeout(pollData,1000);
+      },
+      timeout: 60000
+    });
+  }
+  function changedMetric() {
+    if(!widget) return;
+    if(pollTimeout) {
+      clearTimeout(pollTimeout);
+      pollTimeout = null;
+    }
+    if(pollRequest) {
+      pollRequest.abort();
+      pollRequest = null;
+    }
+    pollData(); 
+  }    
+
   function initialize() {
-    var _data = {};
     var clickable = browseFlows;
-    var widget = $('#sunburst').sunburst({clickable:clickable});
+    widget = $('#sunburst').sunburst({clickable:clickable});
     if(clickable) {
       widget.on('sunburstclick', function(e,val) {
         console.log(val);
@@ -56,31 +96,8 @@ $(function() {
       });
     }
 
-    function draw(data) {
-      _data = data;
-      widget.sunburst('draw',_data);
-      if(_data.description) $('#caption').text(_data.description);
-    }
-    function redraw() {
-      widget.sunburst('draw',_data);
-    }
-
     $(window).resize(redraw);
 
-    (function pollData() {
-      $.ajax({
-        url: restPath + selected + '/json',
-        success: function(data) {
-          draw(data);
-        },
-        error: function(result,status,errorThrown) {
-          draw({});
-        },
-        complete: function() {
-          setTimeout(pollData,1000);
-        },
-        timeout: 60000
-      });
-    })();
+    pollData();
   }
 });
