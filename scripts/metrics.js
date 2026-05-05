@@ -1,8 +1,8 @@
 // author: InMon Corp.
-// version: 0.9
-// date: 9/11/2023
+// version: 1.0
+// date: 5/5/2026
 // description: Sunburst display of flows
-// copyright: Copyright (c) 2021-2023 InMon Corp. ALL RIGHTS RESERVED
+// copyright: Copyright (c) 2021-2026 InMon Corp. ALL RIGHTS RESERVED
 
 var aggMode  = getSystemProperty('sunburst.aggMode')  || 'sum';
 var maxFlows = getSystemProperty('sunburst.maxFlows') || 100;
@@ -183,6 +183,7 @@ function getProcessData() {
     'null:k8s_name',
     'null:systemd_service',
     'null:swarm_name',
+    'null:docker_name',
     'null:jvm_name',
     'vir_host_name'
   ];
@@ -192,8 +193,9 @@ function getProcessData() {
     if(row[1]) updateProcessTree(tree,['k8s',row[1].metricValue,row[2].metricValue],val);
     else if(row[3]) updateProcessTree(tree,['systemd',row[3].metricValue],val);
     else if(row[4]) updateProcessTree(tree,['swarm',row[4].metricValue],val);
-    else if(row[5]) updateProcessTree(tree,['jvm',row[6].metricValue],val);
-    else if(row[6]) updateProcessTree(tree,['vm',row[6].metricValue],val);
+    else if(row[5]) updateProcessTree(tree,['docker',row[5].metricValue],val);
+    else if(row[6]) updateProcessTree(tree,['jvm',row[7].metricValue],val);
+    else if(row[7]) updateProcessTree(tree,['vm',row[7].metricValue],val);
   });
   return tree;
 }
@@ -210,6 +212,7 @@ function getGPUData() {
     'null:k8s_name',
     'null:systemd_service',
     'null:swarm_name',
+    'null:docker_name',
     'null:jvm_name',
     'vir_host_name'
   ];
@@ -223,8 +226,9 @@ function getGPUData() {
     }
     else if(row[3]) updateProcessTree(tree,['systemd',row[3].metricValue],val);
     else if(row[4]) updateProcessTree(tree,['swarm',row[4].metricValue],val);
-    else if(row[5]) updateProcessTree(tree,['jvm',row[6].metricValue],val);
-    else if(row[6]) updateProcessTree(tree,['vm',row[6].metricValue],val);
+    else if(row[5]) updateProcessTree(tree,['docker',row[5].metricValue],val);
+    else if(row[6]) updateProcessTree(tree,['jvm',row[7].metricValue],val);
+    else if(row[7]) updateProcessTree(tree,['vm',row[7].metricValue],val);
   });
   return tree;
 }
